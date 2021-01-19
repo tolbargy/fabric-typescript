@@ -3,12 +3,8 @@
 # Exit on first error
 set -e
 
-# Inicializar binarios y descarga de imagenes docker
-curl -sSL http://bit.ly/2ysbOFE | sudo bash -s - 1.4.6 1.4.6 0.4.18
-
 # Configuracion inicial
 starttime=$(date +%s)
-export PATH=$(pwd)/bin:$PATH # Hacer visible los binarios en tiempo de ejecucion
 export MSYS_NO_PATHCONV=1 # don't rewrite paths for Windows Git Bash users
 CONTRACT_NAME=contratofabcar
 CONTRACT_VERSION=1.0
@@ -24,6 +20,11 @@ rm -rf ./hfc-key-store
 
 # launch network; create channel and join peer to channel
 cd ./network
+
+# Inicializar binarios y descarga de imagenes docker
+bash ./bootstrap.sh 1.4.6 1.4.6 0.4.18
+export PATH=$(pwd)/bin:$PATH # Hacer visible los binarios en tiempo de ejecucion
+
 echo y | ./byfn.sh down
 echo y | ./byfn.sh up -n -a -l node -s couchdb
 
