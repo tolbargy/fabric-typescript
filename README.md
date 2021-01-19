@@ -41,5 +41,9 @@ sudo apt install nodejs
 # Instalar Python 2.7
 sudo apt-get install python2.7
 
+# Instalar Node gyp y Node pre gyp
+sudo npm install --global node-gyp
+sudo npm install --global node-pre-gyp
+
 # Ejecutar contrato
 sudo ./startFabric.sh
