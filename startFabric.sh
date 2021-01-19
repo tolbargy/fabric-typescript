@@ -13,7 +13,7 @@ export MSYS_NO_PATHCONV=1 # don't rewrite paths for Windows Git Bash users
 CONTRACT_NAME=contratofabcar
 CONTRACT_VERSION=1.0
 CC_RUNTIME_LANGUAGE=node # chaincode runtime language is node.js
-CC_SRC_PATH=/opt/gopath/src/$CONTRACT_NAME # Ubicacion del chaincode en el contenedor Docker
+CC_SRC_PATH=/opt/gopath/src/fabcar # Ubicacion del chaincode en el contenedor Docker
 
 # Descargar dependencias y compilar
 npm install
