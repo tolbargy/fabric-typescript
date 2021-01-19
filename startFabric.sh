@@ -7,35 +7,20 @@
 # Exit on first error
 set -e
 
-# don't rewrite paths for Windows Git Bash users
-export MSYS_NO_PATHCONV=1
-starttime=$(date +%s)
-CC_SRC_LANGUAGE=${1:-"go"}
-CC_SRC_LANGUAGE=`echo "$CC_SRC_LANGUAGE" | tr [:upper:] [:lower:]`
-if [ "$CC_SRC_LANGUAGE" = "go" -o "$CC_SRC_LANGUAGE" = "golang"  ]; then
-	CC_RUNTIME_LANGUAGE=golang
-	CC_SRC_PATH=github.com/chaincode/fabcar/go
-elif [ "$CC_SRC_LANGUAGE" = "java" ]; then
-	CC_RUNTIME_LANGUAGE=java
-	CC_SRC_PATH=/opt/gopath/src/github.com/chaincode/fabcar/java
-elif [ "$CC_SRC_LANGUAGE" = "javascript" ]; then
-	CC_RUNTIME_LANGUAGE=node # chaincode runtime language is node.js
-	CC_SRC_PATH=/opt/gopath/src/github.com/chaincode/fabcar/javascript
-elif [ "$CC_SRC_LANGUAGE" = "typescript" ]; then
-	CC_RUNTIME_LANGUAGE=node # chaincode runtime language is node.js
-	CC_SRC_PATH=/opt/gopath/src/github.com/chaincode/fabcar/typescript
-	echo Compiling TypeScript code into JavaScript ...
-	pushd ../chaincode/fabcar/typescript
-	npm install
-	npm run build
-	popd
-	echo Finished compiling TypeScript code into JavaScript
-else
-	echo The chaincode language ${CC_SRC_LANGUAGE} is not supported by this script
-	echo Supported chaincode languages are: go, javascript, and typescript
-	exit 1
-fi
+# Inicializar binarios y descarga de imagenes docker
+curl -sSL http://bit.ly/2ysbOFE | sudo bash -s - 1.4.6 1.4.6 0.4.18
 
+# Configuracion inicial
+export MSYS_NO_PATHCONV=1 # don't rewrite paths for Windows Git Bash users
+starttime=$(date +%s)
+CC_RUNTIME_LANGUAGE=node # chaincode runtime language is node.js
+CC_SRC_PATH=/opt/gopath/src/fabcar
+echo Compiling TypeScript code into JavaScript ...
+pushd ../chaincode/fabcar/typescript
+npm install
+npm run build
+popd
+echo Finished compiling TypeScript code into JavaScript
 
 # clean the keystore
 rm -rf ./hfc-key-store
@@ -43,7 +28,9 @@ rm -rf ./hfc-key-store
 # launch network; create channel and join peer to channel
 cd ../first-network
 echo y | ./byfn.sh down
-echo y | ./byfn.sh up -a -n -s couchdb
+#echo y | ./byfn.sh up -a -n -s couchdb
+#echo y | ./byfn.sh -m up -s couchdb -a
+echo y | ./byfn.sh up -n -a -l node -s couchdb
 
 CONFIG_ROOT=/opt/gopath/src/github.com/hyperledger/fabric/peer
 ORG1_MSPCONFIGPATH=${CONFIG_ROOT}/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
@@ -79,12 +66,18 @@ docker exec \
     -p "$CC_SRC_PATH" \
     -l "$CC_RUNTIME_LANGUAGE"
 
-echo "Instantiating smart contract on mychannel"
+
+
+
+    echo "=============== Instantiating smart contract on mychannel ==============="
 docker exec \
   -e CORE_PEER_LOCALMSPID=Org1MSP \
+  -e CORE_PEER_ADDRESS=peer0.org1.example.com:7051 \
   -e CORE_PEER_MSPCONFIGPATH=${ORG1_MSPCONFIGPATH} \
+  -e CORE_PEER_TLS_ROOTCERT_FILE=${ORG1_TLS_ROOTCERT_FILE} \
   cli \
   peer chaincode instantiate \
+    --logging-level=debug \
     -o orderer.example.com:7050 \
     -C mychannel \
     -n fabcar \
@@ -93,9 +86,7 @@ docker exec \
     -c '{"Args":[]}' \
     -P "AND('Org1MSP.member','Org2MSP.member')" \
     --tls \
-    --cafile ${ORDERER_TLS_ROOTCERT_FILE} \
-    --peerAddresses peer0.org1.example.com:7051 \
-    --tlsRootCertFiles ${ORG1_TLS_ROOTCERT_FILE}
+    --cafile ${ORDERER_TLS_ROOTCERT_FILE}
 
 echo "Waiting for instantiation request to be committed ..."
 sleep 10
